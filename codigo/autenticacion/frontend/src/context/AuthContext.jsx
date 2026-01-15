@@ -7,11 +7,22 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Verificar si hay un usuario en localStorage al cargar
+  // ✅ NUEVA LÓGICA: Verificar sesión con el servidor al cargar la app
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    setUser(currentUser);
-    setLoading(false);
+    const checkAuthentication = async () => {
+      try {
+        // Intentamos obtener el perfil (esto enviará la cookie automáticamente)
+        const response = await authService.getProfile();
+        setUser(response.user);
+      } catch (error) {
+        // Si falla (401), el usuario no está logueado o la cookie expiró
+        setUser(null);
+      } finally {
+        setLoading(false); // Deja de cargar sin importar el resultado
+      }
+    };
+
+    checkAuthentication();
   }, []);
 
   // Función de login
@@ -36,10 +47,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Función de logout
-  const logout = () => {
-    authService.logout();
-    setUser(null);
+  // ✅ MODIFICADO: Logout ahora es async
+  const logout = async () => {
+    try {
+      await authService.logout(); // Avisa al backend para borrar la cookie
+    } finally {
+      setUser(null); // Limpia el estado local siempre
+    }
   };
 
   // Verificar si está autenticado
@@ -58,12 +72,15 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
+      {/* No renderizamos nada hasta que loading sea false. 
+          Esto evita que el usuario vea la pantalla de login 
+          por un milisegundo si ya tenía sesión activa. 
+      */}
       {!loading && children}
     </AuthContext.Provider>
   );
 };
 
-// Hook personalizado para usar el contexto
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

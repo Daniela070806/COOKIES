@@ -1,0 +1,145 @@
+1️⃣ ¿Qué vulnerabilidades de seguridad previenen las cookies HttpOnly que localStorage no puede prevenir?
+
+Las cookies HttpOnly evitan que el token de autenticación sea accesible desde JavaScript. Esto es importante porque previenen ataques XSS, donde un atacante inyecta código malicioso en la página para robar información.
+
+En cambio, localStorage sí puede ser leído por JavaScript, por lo que si ocurre un ataque XSS, el token puede ser robado fácilmente.
+
+🔎 Analogía:
+Es como guardar una llave importante:
+
+En localStorage, la dejo sobre la mesa, cualquiera que entre puede tomarla.
+
+En una cookie HttpOnly, la guardo en una caja fuerte que solo el navegador puede usar.
+
+Por eso, las cookies HttpOnly ofrecen mayor seguridad para autenticación.
+
+2️⃣ ¿Por qué es importante el atributo sameSite: 'strict' en las cookies?
+
+¿Qué es un ataque CSRF y cómo lo previene este atributo?
+
+El atributo sameSite: 'strict' hace que la cookie solo se envíe cuando la petición proviene del mismo sitio web. Esto es clave para prevenir ataques CSRF.
+
+Un ataque CSRF ocurre cuando una página maliciosa engaña al navegador del usuario para enviar una petición a un sitio donde ya está autenticado, sin que el usuario lo sepa.
+
+🔎 Analogía:
+Es como si alguien intentara usar mi tarjeta bancaria desde otro lugar sin mi permiso.
+Con sameSite: 'strict', el banco solo acepta operaciones si vienen directamente desde su propia aplicación.
+
+Esto evita que peticiones externas usen mi sesión.
+
+3️⃣ ¿En qué escenarios NO sería recomendable usar cookies para autenticación?
+
+No es recomendable usar cookies cuando se trabaja con:
+
+Aplicaciones móviles
+
+APIs públicas
+
+Microservicios
+
+Servicios que no dependen del navegador
+
+Esto se debe a que las cookies dependen de políticas del navegador, mientras que en estos casos es más práctico usar tokens enviados manualmente en los headers.
+
+🔹 Técnicas
+4️⃣ ¿Qué pasaría si olvido agregar credentials: 'include' en fetch?
+
+Si no agrego credentials: 'include', el navegador no enviará las cookies al backend.
+Como resultado, el servidor no reconocerá al usuario como autenticado.
+
+🔬 Al experimentar:
+Al eliminar esta opción, el login parecía funcionar, pero al acceder a rutas protegidas el sistema respondía como si no estuviera logueado.
+
+5️⃣ ¿Por qué necesitamos configurar CORS con credentials: true en el backend?
+
+Porque el navegador, por seguridad, bloquea el envío de cookies entre dominios diferentes.
+Al usar credentials: true, le indicamos que permitimos el intercambio de cookies entre el frontend y el backend.
+
+Esto está relacionado con la política de mismo origen (Same-Origin Policy) del navegador.
+
+6️⃣ ¿Cómo afecta el uso de cookies si frontend y backend están en dominios distintos?
+
+Cuando frontend y backend están en dominios diferentes, las cookies pueden ser consideradas cookies de terceros, las cuales muchos navegadores bloquean.
+
+Esto obliga a:
+
+Usar HTTPS
+
+Configurar correctamente SameSite
+
+Considerar otras alternativas como tokens en headers
+
+🔹 Casos Prácticos
+7️⃣ Implementación del mecanismo “Recordarme”
+
+¿Cómo modificaría maxAge?
+Aumentaría el tiempo de vida de la cookie, por ejemplo, a varios días o semanas.
+
+¿Qué consideraciones de seguridad tendría?
+
+Limitar el tiempo máximo
+
+Permitir cerrar sesión manualmente
+
+Renovar el token periódicamente
+
+Invalidar la cookie si se detecta actividad sospechosa
+
+8️⃣ Manejo de la expiración del token
+
+Experiencia de usuario:
+Mostraría un mensaje claro indicando que la sesión expiró y pediría volver a iniciar sesión.
+
+Mantener el contexto:
+Guardaría la página donde estaba el usuario antes de redirigirlo al login, para devolverlo al mismo lugar después de autenticarse.
+
+🔹 Debugging
+9️⃣ Error: Cannot set headers after they are sent to the client
+
+Este error puede ocurrir cuando intento enviar una respuesta más de una vez, por ejemplo, usando res.json() antes de res.cookie().
+
+El orden correcto es:
+
+Establecer la cookie
+
+Enviar la respuesta
+
+🔟 Las cookies no se guardan en el navegador
+
+Posibles causas:
+
+1️⃣ No usar credentials: 'include'
+2️⃣ CORS mal configurado
+3️⃣ Atributos incorrectos en la cookie (sameSite, secure)
+
+Cada una se puede verificar revisando el código y usando las herramientas del navegador.
+
+🔹 Arquitectura
+1️⃣1️⃣ Comparación: localStorage vs Cookies
+Criterio	Cookies	localStorage
+Acceso por JS	No (HttpOnly)	Sí
+Seguridad XSS	Alta	Baja
+Envío automático	Sí	No
+Control del servidor	Alto	Bajo
+Uso ideal	Autenticación	Preferencias
+
+Uso recomendado:
+
+Cookies para autenticación
+
+localStorage para configuraciones visuales o datos no sensibles
+
+1️⃣2️⃣ Estrategia de migración en producción
+
+Para migrar una aplicación sin afectar a los usuarios activos:
+
+Mantendría ambos métodos temporalmente
+
+Migraría usuarios nuevos al nuevo sistema
+
+Forzaría reautenticación gradual
+
+Monitorearía errores y sesiones
+
+Rollback:
+Mantendría compatibilidad con el sistema anterior y activaría una reversión rápida si aparecen problemas.

@@ -1,11 +1,12 @@
 const API_URL = '/api/auth';
 
 export const authService = {
-  // Registrar nuevo usuario
+  // 1. Registro de usuario
   register: async (email, password, name) => {
     const response = await fetch(`${API_URL}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // Permite recibir la cookie del servidor
       body: JSON.stringify({ email, password, name })
     });
 
@@ -14,20 +15,16 @@ export const authService = {
       throw new Error(error.error || 'Error al registrar usuario');
     }
 
-    const data = await response.json();
-    
-    // Guardar token en localStorage
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-
-    return data;
+    // Retornamos los datos del usuario (el token ya está en la cookie)
+    return response.json();
   },
 
-  // Iniciar sesión
+  // 2. Inicio de sesión
   login: async (email, password) => {
     const response = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // Permite recibir la cookie
       body: JSON.stringify({ email, password })
     });
 
@@ -36,63 +33,43 @@ export const authService = {
       throw new Error(error.error || 'Error al iniciar sesión');
     }
 
-    const data = await response.json();
-    
-    // Guardar token en localStorage
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-
-    return data;
+    return response.json();
   },
 
-  // Cerrar sesión
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  // 3. Cerrar sesión (Ahora es ASYNC porque debe avisar al servidor)
+  logout: async () => {
+    try {
+      await fetch(`${API_URL}/logout`, {
+        method: 'POST',
+        credentials: 'include' // Envía la cookie para que el servidor la borre
+      });
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
   },
 
-  // Obtener usuario actual
-  getCurrentUser: () => {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
-  },
-
-  // Obtener token
-  getToken: () => {
-    return localStorage.getItem('token');
-  },
-
-  // Verificar si está autenticado
-  isAuthenticated: () => {
-    return !!localStorage.getItem('token');
-  },
-
-  // Obtener perfil del servidor
+  // 4. Obtener perfil del servidor (Verifica si la cookie es válida)
   getProfile: async () => {
-    const token = authService.getToken();
-    
     const response = await fetch(`${API_URL}/me`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      method: 'GET',
+      credentials: 'include' // Envía la cookie automáticamente
     });
 
     if (!response.ok) {
-      throw new Error('Error al obtener perfil');
+      throw new Error('Sesión no válida o expirada');
     }
 
     return response.json();
   },
 
-  // Hacer petición autenticada
+  // 5. Reemplazo de fetchWithAuth
+  // Ya no necesitamos añadir el Header "Authorization" manualmente
   fetchWithAuth: async (url, options = {}) => {
-    const token = authService.getToken();
-    
     const config = {
       ...options,
+      credentials: 'include', // Asegura que se envíe la cookie
       headers: {
         ...options.headers,
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     };
@@ -100,8 +77,7 @@ export const authService = {
     const response = await fetch(url, config);
     
     if (response.status === 401) {
-      // Token expirado o inválido
-      authService.logout();
+      // Si el servidor dice que no hay cookie o es inválida
       window.location.href = '/login';
       throw new Error('Sesión expirada');
     }
